@@ -11,7 +11,6 @@ import { HeroPerson } from "./HeroPerson";
 import { ColorPicker } from "./ColorPicker";
 import { IdentityDevice } from "./IdentityDevice";
 import { DeviceCaption } from "./DeviceCaption";
-import { RightQuoteCard } from "./RightQuoteCard";
 import { TechMotto } from "./TechMotto";
 import { AboutCard } from "./AboutCard";
 import { TechnicalFooter } from "./TechnicalFooter";
@@ -19,13 +18,15 @@ import { BarcodeSignature } from "./BarcodeSignature";
 import { Crosshair, DataPoint, HudLine } from "../shared/decorations";
 
 function DesktopStage() {
+  // Z-layers (PRD V5 §4.2): 0 background · 10 title · 15 slogan · 20 subject
+  // · 30 floating UI · nav/critical controls live in <SectionNav />.
+  // Subject stays centered at 50% — UI adapts to it, never the reverse.
   return (
     <div className="relative hidden h-[100svh] w-full min-h-[760px] min-[1280px]:block">
       <HeroBackground />
       <Crosshair className="left-[260px] top-[150px]" />
-      <Crosshair className="right-[150px] top-[220px]" />
       <DataPoint className="left-[120px] top-[330px]" label="A-01" />
-      <DataPoint className="right-[35px] bottom-[480px]" label="B-07" />
+      <DataPoint className="right-[70px] bottom-[210px]" label="B-07" />
       <HudLine className="left-[35px] top-[128px] w-[110px]" />
       <HudLine vertical className="right-[64px] top-[165px] h-[150px]" />
 
@@ -61,18 +62,15 @@ function DesktopStage() {
           <TechnicalFooter />
         </div>
       </div>
-      <div className="absolute bottom-[26px] left-[290px] z-30">
+      <div className="absolute bottom-[26px] left-[306px] z-30 w-[210px]">
         <MountainCard />
       </div>
-      <div className="absolute left-[368px] top-[600px] z-30">
+      <div className="absolute left-[368px] top-[576px] z-30">
         <KeepGoing />
       </div>
 
       <div className="absolute right-[40px] top-[92px] z-30">
         <TechMotto />
-      </div>
-      <div className="absolute right-[40px] top-[644px] z-30 max-[1535px]:hidden">
-        <RightQuoteCard />
       </div>
       <div className="absolute right-[440px] top-[280px] z-30 max-[1299px]:hidden max-[1535px]:right-[370px] max-[1535px]:top-[272px]">
         <ColorPicker />

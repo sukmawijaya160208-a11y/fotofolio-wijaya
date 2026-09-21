@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from "framer-motion";
 import { manifesto, manifestoIntro } from "../../data/manifesto";
+import { CodeUniverse } from "../universe/CodeUniverse";
 import { MicroLabel } from "../shared/decorations";
 
 function ManifestoWord({
@@ -96,12 +97,13 @@ export function ManifestoSection() {
         aria-hidden="true"
       />
       <div className="pointer-events-none absolute left-6 top-20 font-mono text-[10px] tracking-[0.2em] text-paper/35 md:left-10">
-        11 / MANIFESTO
+        11 / CODE UNIVERSE
       </div>
       <h2 id="manifesto-title" className="sr-only">
         Manifesto pribadi
       </h2>
       <ManifestoSequence />
+      <CodeUniverse />
     </section>
   );
 }

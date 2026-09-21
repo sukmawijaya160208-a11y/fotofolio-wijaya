@@ -39,3 +39,4 @@ test-results/
 
 # Temp debug scripts (keep repo clean)
 *.mjs.bak
+.vercel
