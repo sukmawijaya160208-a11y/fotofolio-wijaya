@@ -1,18 +1,86 @@
 import { Suspense, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Html, Line } from "@react-three/drei";
+import { Html, Line, useTexture } from "@react-three/drei";
 import * as THREE from "three";
-import { universeNodes, universeOrbits, type UniverseNode } from "../../data/universe";
+import {
+  universeNodes,
+  universeOrbits,
+  type PlanetBody,
+  type UniverseNode,
+} from "../../data/universe";
 
-const TIER_COLORS: Record<number, string> = {
-  1: "#d3a52d",
-  2: "#5b6b7a",
-  3: "#7f0d22",
-  4: "#41505d",
-  5: "#8fa3b0",
-};
+const P = (f: string) => `/assets/planets/${f}`;
+const TEX_URLS = {
+  sun: P("sunmap.jpg"),
+  mercury: P("mercurymap.jpg"),
+  venus: P("venusmap.jpg"),
+  earth: P("earthmap1k.jpg"),
+  clouds: P("earthcloudmaptrans.jpg"),
+  mars: P("marsmap1k.jpg"),
+  jupiter: P("jupitermap.jpg"),
+  saturn: P("saturnmap.jpg"),
+  ring: P("saturnringcolor.jpg"),
+  moon: P("moonmap1k.jpg"),
+  neptune: P("neptunemap.jpg"),
+  uranus: P("uranusmap.jpg"),
+  pluto: P("plutomap1k.jpg"),
+} as const;
 
 type Quality = "low" | "high";
+type TexMap = Record<keyof typeof TEX_URLS, THREE.Texture> & { ice: THREE.Texture };
+
+function usePlanetTextures(): TexMap {
+  const urls = useMemo(() => Object.values(TEX_URLS), []);
+  const loaded = useTexture(urls) as THREE.Texture[];
+  const ice = useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = 256;
+    c.height = 128;
+    const g = c.getContext("2d")!;
+    g.fillStyle = "#a9c3d4";
+    g.fillRect(0, 0, 256, 128);
+    for (let i = 0; i < 900; i++) {
+      const v = 150 + Math.floor(Math.random() * 90);
+      g.fillStyle = `rgba(${v - 20},${v + 5},${v + 15},0.5)`;
+      g.fillRect(Math.random() * 256, Math.random() * 128, 2, 2);
+    }
+    for (let i = 0; i < 14; i++) {
+      g.fillStyle = "rgba(230,242,248,0.35)";
+      g.fillRect(0, Math.random() * 128, 256, 3 + Math.random() * 7);
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }, []);
+  return useMemo(() => {
+    const m = {} as TexMap;
+    (Object.keys(TEX_URLS) as (keyof typeof TEX_URLS)[]).forEach((k, i) => {
+      loaded[i].colorSpace = THREE.SRGBColorSpace;
+      loaded[i].anisotropy = 4;
+      m[k] = loaded[i];
+    });
+    m.ice = ice;
+    return m;
+  }, [loaded, ice]);
+}
+
+function useGlowTexture() {
+  return useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = c.height = 256;
+    const g = c.getContext("2d")!;
+    const grad = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+    grad.addColorStop(0, "rgba(255,236,190,0.9)");
+    grad.addColorStop(0.25, "rgba(240,190,90,0.45)");
+    grad.addColorStop(0.55, "rgba(200,140,50,0.14)");
+    grad.addColorStop(1, "rgba(200,140,50,0)");
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 256, 256);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }, []);
+}
 
 function lerpKeys(p: number, keys: [number, number][]) {
   if (p <= keys[0][0]) return keys[0][1];
@@ -23,6 +91,8 @@ function lerpKeys(p: number, keys: [number, number][]) {
   }
   return keys[keys.length - 1][1];
 }
+
+const ORIGIN = new THREE.Vector3(0, 0, 0);
 
 /** Scroll → camera journey (PRD V5 §14). Smooth dolly + slow arc, no jumps. */
 function CameraRig({
@@ -62,45 +132,84 @@ function CameraRig({
     ]);
     tmp.current.set(Math.sin(a) * z, y, Math.cos(a) * z);
     camera.position.lerp(tmp.current, 0.06);
-    look.current.lerp(focus ?? THREE_NULL, 0.08);
+    look.current.lerp(focus ?? ORIGIN, 0.08);
     camera.lookAt(look.current);
   });
   return null;
 }
-const THREE_NULL = new THREE.Vector3(0, 0, 0);
 
-function Core() {
-  const ring = useRef<THREE.Mesh>(null);
-  useFrame((_, dt) => {
-    if (ring.current) ring.current.rotation.z += dt * 0.12;
+function Sun({ tex, glow, reduce }: { tex: THREE.Texture; glow: THREE.Texture; reduce: boolean }) {
+  const mesh = useRef<THREE.Mesh>(null);
+  const sprite = useRef<THREE.Sprite>(null);
+  useFrame((state) => {
+    if (mesh.current && !reduce) mesh.current.rotation.y += 0.0006;
+    if (sprite.current && !reduce) {
+      const s = 5.1 + Math.sin(state.clock.elapsedTime * 0.8) * 0.22;
+      sprite.current.scale.set(s, s, 1);
+    }
   });
   return (
     <group>
-      <mesh>
-        <icosahedronGeometry args={[0.55, 1]} />
-        <meshStandardMaterial
-          color="#1b2630"
-          emissive="#d3a52d"
-          emissiveIntensity={0.55}
-          metalness={0.85}
-          roughness={0.25}
+      <mesh ref={mesh}>
+        <sphereGeometry args={[0.72, 48, 32]} />
+        <meshBasicMaterial map={tex} toneMapped={false} />
+      </mesh>
+      <sprite ref={sprite} scale={[5.1, 5.1, 1]}>
+        <spriteMaterial
+          map={glow}
+          transparent
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+          opacity={0.9}
         />
-      </mesh>
-      <mesh scale={1.28}>
-        <icosahedronGeometry args={[0.55, 1]} />
-        <meshBasicMaterial color="#d3a52d" wireframe transparent opacity={0.22} />
-      </mesh>
-      <mesh ref={ring} rotation={[Math.PI / 2.1, 0, 0]}>
-        <torusGeometry args={[1.15, 0.012, 8, 80]} />
-        <meshBasicMaterial color="#5b6b7a" transparent opacity={0.55} />
-      </mesh>
-      <pointLight color="#d3a52d" intensity={3} distance={26} decay={1.2} />
+      </sprite>
+      <pointLight color="#fff0d0" intensity={5} distance={34} decay={1.4} />
       <Html center className="pointer-events-none select-none">
-        <span className="whitespace-nowrap font-mono text-[9px] tracking-[0.3em] text-gold/80">
+        <span className="whitespace-nowrap font-mono text-[9px] tracking-[0.3em] text-gold/90">
           WIJAYA
         </span>
       </Html>
     </group>
+  );
+}
+
+function SaturnRing({
+  tex,
+  size,
+}: {
+  tex: THREE.Texture;
+  size: number;
+}) {
+  const geo = useMemo(() => {
+    const inner = size * 1.35;
+    const outer = size * 2.15;
+    const g = new THREE.RingGeometry(inner, outer, 96, 1);
+    const pos = g.attributes.position;
+    const uv = g.attributes.uv;
+    const v = new THREE.Vector3();
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i);
+      uv.setXY(i, (v.length() - inner) / (outer - inner), 1);
+    }
+    return g;
+  }, [size]);
+  return (
+    <mesh geometry={geo} rotation={[-Math.PI / 2 + 0.42, 0.12, 0]}>
+      <meshBasicMaterial map={tex} transparent side={THREE.DoubleSide} depthWrite={false} opacity={0.95} />
+    </mesh>
+  );
+}
+
+function Clouds({ tex, size, speed, reduce }: { tex: THREE.Texture; size: number; speed: number; reduce: boolean }) {
+  const ref = useRef<THREE.Mesh>(null);
+  useFrame(() => {
+    if (ref.current && !reduce) ref.current.rotation.y += speed * 1.35 * 0.016;
+  });
+  return (
+    <mesh ref={ref}>
+      <sphereGeometry args={[size * 1.018, 32, 24]} />
+      <meshStandardMaterial map={tex} transparent depthWrite={false} roughness={1} metalness={0} />
+    </mesh>
   );
 }
 
@@ -109,6 +218,8 @@ function Planet({
   radius,
   angle,
   reduce,
+  quality,
+  tex,
   selected,
   onSelect,
 }: {
@@ -116,67 +227,90 @@ function Planet({
   radius: number;
   angle: number;
   reduce: boolean;
+  quality: Quality;
+  tex: TexMap;
   selected: boolean;
   onSelect: (n: UniverseNode | null) => void;
 }) {
-  const group = useRef<THREE.Group>(null);
+  const spin = useRef<THREE.Group>(null);
   const mesh = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
-  const color = TIER_COLORS[node.orbit] ?? "#5b6b7a";
+  const map = node.body === "ice" ? tex.ice : tex[node.body as keyof typeof TEX_URLS];
+  const seg: [number, number] = quality === "low" ? [20, 14] : [36, 24];
   const x = Math.cos(angle) * radius;
   const z = Math.sin(angle) * radius;
+  const spinSpeed = node.spin ?? 0.12;
 
-  useFrame((state, dt) => {
-    if (!group.current || !mesh.current) return;
-    if (!reduce) group.current.rotation.y += dt * node.speed * (node.orbit % 2 ? 1 : -1);
-    const target = hovered || selected ? 1.1 : 1;
-    mesh.current.scale.lerp({ x: target, y: target, z: target } as THREE.Vector3, 0.12);
-    if (!reduce) mesh.current.rotation.y += dt * 0.15;
-    if (hovered) document.body.style.cursor = "pointer";
-    else document.body.style.cursor = "auto";
-    void state;
+  useFrame(() => {
+    if (spin.current && !reduce) spin.current.rotation.y += spinSpeed * 0.016;
+    if (mesh.current) {
+      const t = hovered || selected ? 1.12 : 1;
+      const s = mesh.current.scale;
+      s.x += (t - s.x) * 0.12;
+      s.y = s.z = s.x;
+    }
   });
 
   return (
-    <group ref={group}>
-      <mesh
-        ref={mesh}
-        position={[x, 0, z]}
-        onPointerOver={(e) => {
-          e.stopPropagation();
-          setHovered(true);
-        }}
-        onPointerOut={() => setHovered(false)}
-        onPointerDown={(e) => {
-          e.stopPropagation();
-          onSelect(selected ? null : node);
-        }}
-      >
-        <icosahedronGeometry args={[node.size, 1]} />
-        <meshStandardMaterial
-          color="#1b2630"
-          emissive={color}
-          emissiveIntensity={hovered || selected ? 0.5 : 0.22}
-          metalness={0.8}
-          roughness={0.32}
-        />
-      </mesh>
-      <Html
-        position={[x, node.size + 0.42, z]}
-        center
-        className="pointer-events-none select-none"
-        style={{ opacity: hovered || selected ? 1 : 0, transition: "opacity .25s" }}
-      >
-        <span className="whitespace-nowrap text-center">
-          <span className="block font-mono text-[9px] tracking-[0.2em] text-paper">
-            {node.name.toUpperCase()}
-          </span>
-          <span className="block font-mono text-[7.5px] tracking-[0.24em] text-paper/45">
-            {node.category}
-          </span>
-        </span>
-      </Html>
+    <group>
+      <group ref={spin}>
+        <mesh
+          ref={mesh}
+          position={[x, 0, z]}
+          onPointerOver={(e) => {
+            e.stopPropagation();
+            setHovered(true);
+            document.body.style.cursor = "pointer";
+          }}
+          onPointerOut={() => {
+            setHovered(false);
+            document.body.style.cursor = "auto";
+          }}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            onSelect(selected ? null : node);
+          }}
+        >
+          <sphereGeometry args={[node.size, seg[0], seg[1]]} />
+          <meshStandardMaterial
+            map={map}
+            color={node.tint ?? "#ffffff"}
+            roughness={0.92}
+            metalness={0.04}
+            emissive="#d3a52d"
+            emissiveIntensity={hovered || selected ? 0.28 : 0}
+          />
+        </mesh>
+        {node.clouds && (
+          <group position={[x, 0, z]}>
+            <Clouds tex={tex.clouds} size={node.size} speed={spinSpeed} reduce={reduce} />
+          </group>
+        )}
+        {node.ring && <SaturnRing tex={tex.ring} size={node.size} />}
+      </group>
+      {node.ring ? (
+        <Html position={[x + node.size * 2.3, 0, z]} center className="pointer-events-none select-none" style={{ opacity: hovered || selected ? 1 : 0, transition: "opacity .25s" }}>
+          <Label node={node} />
+        </Html>
+      ) : (
+        <Html position={[x, node.size + 0.42, z]} center className="pointer-events-none select-none" style={{ opacity: hovered || selected ? 1 : 0, transition: "opacity .25s" }}>
+          <Label node={node} />
+        </Html>
+      )}
     </group>
+  );
+}
+
+function Label({ node }: { node: UniverseNode }) {
+  return (
+    <span className="whitespace-nowrap text-center">
+      <span className="block font-mono text-[9px] tracking-[0.2em] text-paper">
+        {node.name.toUpperCase()}
+      </span>
+      <span className="block font-mono text-[7.5px] tracking-[0.24em] text-paper/45">
+        {node.category}
+      </span>
+    </span>
   );
 }
 
@@ -185,6 +319,8 @@ function OrbitSystem({
   radius,
   nodes,
   reduce,
+  quality,
+  tex,
   selected,
   onSelect,
 }: {
@@ -192,9 +328,12 @@ function OrbitSystem({
   radius: number;
   nodes: UniverseNode[];
   reduce: boolean;
+  quality: Quality;
+  tex: TexMap;
   selected: UniverseNode | null;
   onSelect: (n: UniverseNode | null) => void;
 }) {
+  const swing = useRef<THREE.Group>(null);
   const circle = useMemo(() => {
     const pts: [number, number, number][] = [];
     for (let i = 0; i <= 72; i++) {
@@ -204,37 +343,42 @@ function OrbitSystem({
     return pts;
   }, [radius]);
 
+  useFrame((_, dt) => {
+    if (swing.current && !reduce) {
+      const dir = orbitIndex % 2 ? 1 : -1;
+      const sp = nodes[0]?.speed ?? 0.04;
+      swing.current.rotation.y += dt * sp * dir;
+    }
+  });
+
   return (
     <group rotation={[0.09 * orbitIndex, 0, 0.05 * orbitIndex]}>
-      <Line
-        points={circle}
-        color="#5b6b7a"
-        lineWidth={1}
-        transparent
-        opacity={0.16}
-        dashed={false}
-      />
-      {nodes.map((n, i) => (
-        <Planet
-          key={n.id}
-          node={n}
-          radius={radius}
-          angle={(i / nodes.length) * Math.PI * 2 + orbitIndex * 0.7}
-          reduce={reduce}
-          selected={selected?.id === n.id}
-          onSelect={onSelect}
-        />
-      ))}
+      <Line points={circle} color="#5b6b7a" lineWidth={1} transparent opacity={0.14} />
+      <group ref={swing}>
+        {nodes.map((n, i) => (
+          <Planet
+            key={n.id}
+            node={n}
+            radius={radius}
+            angle={(i / nodes.length) * Math.PI * 2 + orbitIndex * 0.7}
+            reduce={reduce}
+            quality={quality}
+            tex={tex}
+            selected={selected?.id === n.id}
+            onSelect={onSelect}
+          />
+        ))}
+      </group>
     </group>
   );
 }
 
-function StarField({ count }: { count: number }) {
+function StarField({ count, reduce }: { count: number; reduce: boolean }) {
   const ref = useRef<THREE.Points>(null);
   const positions = useMemo(() => {
     const arr = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
-      const r = 16 + Math.random() * 10;
+      const r = 17 + Math.random() * 11;
       const a = Math.random() * Math.PI * 2;
       const b = (Math.random() - 0.5) * Math.PI * 0.7;
       arr[i * 3] = Math.cos(a) * Math.cos(b) * r;
@@ -245,26 +389,15 @@ function StarField({ count }: { count: number }) {
   }, [count]);
 
   useFrame((_, dt) => {
-    if (ref.current) ref.current.rotation.y += dt * 0.01;
+    if (ref.current && !reduce) ref.current.rotation.y += dt * 0.008;
   });
 
   return (
     <points ref={ref}>
       <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          args={[positions, 3]}
-          count={count}
-        />
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
       </bufferGeometry>
-      <pointsMaterial
-        size={0.035}
-        color="#f8fafb"
-        transparent
-        opacity={0.45}
-        sizeAttenuation
-        depthWrite={false}
-      />
+      <pointsMaterial size={0.045} color="#f8fafb" transparent opacity={0.5} sizeAttenuation depthWrite={false} />
     </points>
   );
 }
@@ -282,38 +415,39 @@ function Scene({
   selected: UniverseNode | null;
   onSelect: (n: UniverseNode | null) => void;
 }) {
+  const tex = usePlanetTextures();
+  const glow = useGlowTexture();
   const focus = useMemo(() => {
     if (!selected) return null;
     const orbitIndex = selected.orbit - 1;
     const radius = universeOrbits[orbitIndex]?.radius ?? 3;
     const siblings = universeNodes.filter((n) => n.orbit === selected.orbit);
-    const idx = siblings.findIndex((n) => n.id === selected.id);
-    const angle = (idx / siblings.length) * Math.PI * 2 + orbitIndex * 0.7;
-    return new THREE.Vector3(
-      Math.cos(angle) * radius,
-      0,
-      Math.sin(angle) * radius,
-    );
+    const idx = Math.max(0, siblings.findIndex((n) => n.id === selected.id));
+    const angle = (idx / siblings.length) * Math.PI * 2 + selected.orbit * 0.7;
+    return new THREE.Vector3(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
   }, [selected]);
 
   return (
     <>
-      <ambientLight intensity={0.35} />
-      <directionalLight position={[6, 8, 4]} intensity={0.6} color="#8fa3b0" />
+      <ambientLight intensity={0.14} />
+      <hemisphereLight args={["#24313d", "#0a0e12", 0.3]} />
+      <directionalLight position={[6, 8, 4]} intensity={0.25} color="#8fa3b0" />
       <CameraRig progress={progress} reduce={reduce} focus={focus} />
-      <Core />
-      {universeOrbits.map((o) => (
+      <Sun tex={tex.sun} glow={glow} reduce={reduce} />
+      {universeOrbits.map((o, i) => (
         <OrbitSystem
           key={o.id}
-          orbitIndex={universeOrbits.indexOf(o) + 1}
+          orbitIndex={i + 1}
           radius={o.radius}
-          nodes={universeNodes.filter((n) => n.orbit === universeOrbits.indexOf(o) + 1)}
+          nodes={universeNodes.filter((n) => n.orbit === i + 1)}
           reduce={reduce}
+          quality={quality}
+          tex={tex}
           selected={selected}
           onSelect={onSelect}
         />
       ))}
-      <StarField count={quality === "low" ? 18 : 50} />
+      <StarField count={quality === "low" ? 22 : 60} reduce={reduce} />
     </>
   );
 }
@@ -336,18 +470,13 @@ export function UniverseCanvas({
       className="absolute inset-0"
       dpr={quality === "low" ? 1 : [1, 2]}
       gl={{ antialias: true, powerPreference: "high-performance" }}
-      camera={{ position: [0, 0.8, 17], fov: 50, near: 0.1, far: 60 }}
-      onPointerMissed={() => onSelect(null)}
+      camera={{ position: [0, 0.8, 17], fov: 50, near: 0.1, far: 70 }}
     >
       <Suspense fallback={null}>
-        <Scene
-          progress={progress}
-          reduce={reduce}
-          quality={quality}
-          selected={selected}
-          onSelect={onSelect}
-        />
+        <Scene progress={progress} reduce={reduce} quality={quality} selected={selected} onSelect={onSelect} />
       </Suspense>
     </Canvas>
   );
 }
+
+export type { PlanetBody };
