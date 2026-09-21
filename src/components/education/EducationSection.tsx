@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { certificates, education } from "../../data/education";
 import { PortfolioSection } from "../shared/PortfolioSection";
 import { Reveal } from "../shared/Reveal";
+import { ScrollVideo } from "../shared/ScrollVideo";
 import { X } from "lucide-react";
 import { HudLine, MicroLabel, TechnicalCorner } from "../shared/decorations";
 
@@ -132,6 +133,16 @@ export function EducationSection() {
       className="flex items-center py-[var(--section-pad)]"
       minHeight="100vh"
     >
+      <ScrollVideo src="/assets/education-bg.mp4" label="Video latar pendidikan" />
+      {/* Edge gradients only — tengah dibiarkan cerah sesuai permintaan */}
+      <div
+        className="pointer-events-none absolute inset-0 z-[5]"
+        aria-hidden="true"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(3,5,7,.72) 0%, transparent 22%, transparent 72%, rgba(3,5,7,.78) 100%)",
+        }}
+      />
       <div className="relative z-10 w-full">
         <Reveal className="mb-8 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div>
