@@ -46,12 +46,14 @@ export function ScrollVideo({
   useEffect(() => {
     let id = 0;
     let lastSet = -1;
+    const FPS = 24;
     const tick = () => {
       const v = videoRef.current;
       if (v && v.duration && Number.isFinite(v.duration) && !reduce && nearRef.current) {
-        current.current += (target.current - current.current) * 0.12;
-        const t = Math.min(Math.max(current.current, 0), 1) * v.duration;
-        if (Math.abs(t - lastSet) > 1 / 30) {
+        current.current += (target.current - current.current) * 0.14;
+        // Snap ke grid frame (24fps) — seek selalu mendarat tepat, no ghosting.
+        const t = Math.round(Math.min(Math.max(current.current, 0), 1) * v.duration * FPS) / FPS;
+        if (Math.abs(t - lastSet) > 1 / FPS / 2) {
           try {
             v.currentTime = t;
             lastSet = t;
