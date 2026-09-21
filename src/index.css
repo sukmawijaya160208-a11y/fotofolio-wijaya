@@ -16,6 +16,7 @@
   --color-line: rgba(39, 57, 70, 0.2);
 
   --font-display: "Anton", "Bebas Neue", system-ui, sans-serif;
+  --font-observatory: "Space Grotesk", "Inter", system-ui, sans-serif;
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
   --font-hand: "Caveat", cursive;
@@ -69,6 +70,11 @@ body {
   font-family: var(--font-display);
   letter-spacing: 0.01em;
   font-weight: 400;
+}
+
+.font-observatory {
+  font-family: var(--font-observatory);
+  letter-spacing: 0.01em;
 }
 
 .title-extrude {
