@@ -25,34 +25,36 @@ export const education: EducationEntry = {
 };
 
 // TODO: replace with real certificates — these are editable placeholders.
+// Real user-supplied certificates (foto asli, judul dari nama file).
+// Issuer/tahun menyusul dari owner — tidak dikarang.
 export const certificates: Certificate[] = [
   {
     id: "cert-01",
-    title: "CERTIFICATE TITLE",
-    issuer: "ISSUER",
-    date: "20XX",
+    title: "PROMPT ENGINEER",
+    issuer: "—",
+    date: "—",
     image: "/assets/certificate-01.webp",
     featured: true,
   },
   {
     id: "cert-02",
-    title: "CERTIFICATE TITLE",
-    issuer: "ISSUER",
-    date: "20XX",
+    title: "AI PROMPT",
+    issuer: "—",
+    date: "—",
     image: "/assets/certificate-02.webp",
   },
   {
     id: "cert-03",
-    title: "CERTIFICATE TITLE",
-    issuer: "ISSUER",
-    date: "20XX",
+    title: "CYBER SECURITY",
+    issuer: "—",
+    date: "—",
     image: "/assets/certificate-03.webp",
   },
   {
     id: "cert-04",
-    title: "CERTIFICATE TITLE",
-    issuer: "ISSUER",
-    date: "20XX",
+    title: "UI UX DESIGNER",
+    issuer: "—",
+    date: "—",
     image: "/assets/certificate-04.webp",
   },
 ];
