@@ -11,10 +11,10 @@ export function IdentityBadge() {
       </div>
       <div className="leading-tight">
         <span className="block font-mono text-[9.5px] font-medium uppercase tracking-[0.2em] text-ink">
-          NEW GENERATION
+          PROMPT ENGINEER
         </span>
         <span className="block font-mono text-[9.5px] uppercase tracking-[0.2em] text-muted">
-          INDONESIAN YOUTH
+          SISTEM INFORMASI
         </span>
       </div>
       <TechnicalCorner variant="top-left" size={9} className="absolute -left-1.5 -top-1.5" />

@@ -93,6 +93,11 @@ export function FinalSignature() {
           <span className="font-mono text-[11px] uppercase tracking-[0.26em] text-paper/75">
             {finalSignature.name}
           </span>
+          {finalSignature.meta.map((m) => (
+            <span key={m} className="font-mono text-[10px] uppercase tracking-[0.2em] text-paper/45">
+              {m}
+            </span>
+          ))}
           <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-paper/45">
             CREATIVE DEVELOPER
           </span>

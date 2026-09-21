@@ -8,7 +8,7 @@ export type Achievement = {
 export const achievements: Achievement[] = [
   { value: "125", suffix: "+", label: "POSTS", note: "Konten yang dipublikasikan" },
   { value: "88.8", suffix: "K", label: "AUDIENCE", note: "Jangkauan audiens" },
-  { value: "01", suffix: "", label: "DEGREE", note: "Informatics Engineering" },
+  { value: "01", suffix: "", label: "DEGREE", note: "Sistem Informasi" },
   { value: "XX", suffix: "", label: "PROJECTS", note: "Proyek sejauh ini" },
   { value: "XX", suffix: "", label: "CERTIFICATES", note: "Sertifikat sejauh ini" },
 ];

@@ -9,11 +9,10 @@ export const contact = {
 };
 
 export const contactLinks = [
+  { label: "WHATSAPP", value: "0851-6988-3337", href: "https://wa.me/6285169883337" },
   { label: "EMAIL", value: "lamibalsukma@gmail.com", href: "mailto:lamibalsukma@gmail.com" },
-  { label: "INSTAGRAM", value: "lamibalsukma", href: "https://instagram.com/lamibalsukma" },
-  { label: "FACEBOOK", value: "lamibalsukma", href: "https://facebook.com/lamibalsukma" },
-  { label: "TIKTOK", value: "lamibalsukma", href: "https://tiktok.com/@lamibalsukma" },
-  { label: "WEBSITE", value: "www.lamibalsukma.com", href: "https://lamibalsukma.com" },
+  { label: "INSTAGRAM", value: "@sukmawijaya1602", href: "https://instagram.com/sukmawijaya1602" },
+  { label: "WEBSITE", value: "muhammad-sukma-wijaya.vercel.app", href: "/" },
 ];
 
 export const navItems = [

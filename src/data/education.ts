@@ -17,10 +17,10 @@ export type EducationEntry = {
 };
 
 export const education: EducationEntry = {
-  degree: "INFORMATICS ENGINEERING",
-  school: "UNIVERSITAS PGRI SILAMPARI",
-  period: "TEKNIK INFORMATIKA",
-  status: "ONGOING",
+  degree: "SISTEM INFORMASI",
+  school: "UNIVERSITAS BINA INSAN LUBUKLINGGAU",
+  period: "SEMESTER 3",
+  status: "AKTIF",
   subjects: ["Algoritma", "Basis Data", "Pemrograman", "Rekayasa Perangkat Lunak", "Jaringan", "UI / UX"],
 };
 
