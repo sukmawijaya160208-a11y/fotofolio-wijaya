@@ -2,7 +2,7 @@ import { PortfolioSection } from "../shared/PortfolioSection";
 import { Reveal } from "../shared/Reveal";
 import { HudLine, MicroLabel } from "../shared/decorations";
 import { VideoAccordion } from "./VideoAccordion";
-import { ServicesGlass } from "./ServicesGlass";
+import { ListenApp } from "./ListenApp";
 
 /**
  * Section 07 — SHOWCASE. Dua konten:
@@ -29,12 +29,12 @@ export function CaseStudySection() {
 
         <div className="my-16 flex items-center gap-4" aria-hidden="true">
           <span className="h-px flex-1 bg-white/12" />
-          <MicroLabel className="text-paper/40">LAYANAN & KONTAK CEPAT</MicroLabel>
+          <MicroLabel className="text-paper/40">FOCUS MIX</MicroLabel>
           <span className="h-px flex-1 bg-white/12" />
         </div>
 
         <Reveal variant="fade">
-          <ServicesGlass />
+          <ListenApp />
         </Reveal>
 
         <div className="mt-12 flex items-center gap-4">
