@@ -10,15 +10,16 @@ export type Project = {
   caseStudyId?: string;
 };
 
-// TODO: replace with real projects — these are editable placeholders.
+// Real user-supplied projects (foto + judul asli dari owner).
+// Deskripsi detail menyusul — tidak dikarang.
 export const projects: Project[] = [
   {
     id: "project-01",
-    title: "PROJECT NAME",
+    title: "WEBSITE ANIME",
     year: "2026",
-    category: "CATEGORY",
+    category: "WEBSITE",
     description:
-      "Deskripsi proyek belum diisi. Ganti entri ini di src/data/projects.ts dengan proyek nyata.",
+      "Website bertema anime. Detail proyek menyusul dari owner.",
     image: "/assets/project-01.webp",
     tags: ["React", "TypeScript"],
     featured: true,
@@ -26,28 +27,28 @@ export const projects: Project[] = [
   },
   {
     id: "project-02",
-    title: "PROJECT NAME",
+    title: "UI UX DESAIN",
     year: "2025",
-    category: "CATEGORY",
-    description: "Deskripsi proyek belum diisi.",
+    category: "UI / UX",
+    description: "Desain antarmuka. Detail proyek menyusul dari owner.",
     image: "/assets/project-02.webp",
     tags: ["UI / UX"],
   },
   {
     id: "project-03",
-    title: "PROJECT NAME",
+    title: "WEBSITE ARSITEK GAME",
     year: "2025",
-    category: "CATEGORY",
-    description: "Deskripsi proyek belum diisi.",
+    category: "WEBSITE",
+    description: "Website arsitek bertema game. Detail proyek menyusul dari owner.",
     image: "/assets/project-03.webp",
     tags: ["Web"],
   },
   {
     id: "project-04",
-    title: "PROJECT NAME",
+    title: "WEB LESTARI BUMI",
     year: "2024",
-    category: "CATEGORY",
-    description: "Deskripsi proyek belum diisi.",
+    category: "WEBSITE",
+    description: "Website Lestari Bumi. Detail proyek menyusul dari owner.",
     image: "/assets/project-04.webp",
     tags: ["Web"],
   },
