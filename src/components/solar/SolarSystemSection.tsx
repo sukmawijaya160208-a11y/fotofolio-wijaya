@@ -8,12 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import {
-  motion,
-  useReducedMotion,
-  useScroll,
-  useTransform,
-} from "framer-motion";
+import { useReducedMotion } from "framer-motion";
 import { OBSERVATORY, celestialBodies } from "../../data/solarSystem";
 import { portfolioTargets, targetById } from "../../data/portfolioMap";
 import { useInView } from "../../lib/useInView";
@@ -159,23 +154,15 @@ function TargetPanel({
 export function SolarSystemSection() {
   const reduce = useReducedMotion();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-  const progress = useRef(0);
+  const mountRef = useRef<HTMLDivElement | null>(null);
   const { ref: inViewRef, inView } = useInView<HTMLDivElement>({
     threshold: 0.05,
     rootMargin: "300px 0px",
   });
-  const { scrollYProgress } = useScroll({
-    target: scrollRef,
-    offset: ["start start", "end end"],
-  });
-
-  useEffect(() => {
-    const unsub = scrollYProgress.on("change", (v) => {
-      progress.current = v;
-    });
-    return unsub;
-  }, [scrollYProgress]);
+  const [load, setLoad] = useState({ pct: 0, active: true });
+  const onLoad = useCallback((pct: number, active: boolean) => {
+    setLoad((prev) => (prev.pct === pct && prev.active === active ? prev : { pct, active }));
+  }, []);
 
   const step = useCallback((dir: 1 | -1) => {
     setSelectedId((cur) => {
@@ -186,7 +173,7 @@ export function SolarSystemSection() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const el = scrollRef.current;
+      const el = mountRef.current;
       if (!el) return;
       const r = el.getBoundingClientRect();
       const visible = r.top < window.innerHeight * 0.7 && r.bottom > window.innerHeight * 0.3;
@@ -199,29 +186,19 @@ export function SolarSystemSection() {
     return () => window.removeEventListener("keydown", onKey);
   }, [step]);
 
-  const entryOpacity = useTransform(scrollYProgress, [0, 0.1], [0, 1]);
-  const titleOpacity = useTransform(scrollYProgress, [0, 0.06, 0.14], [1, 1, 0]);
-  const hudOpacity = useTransform(scrollYProgress, [0.1, 0.22], [0, 1]);
-  const exitDim = useTransform(scrollYProgress, [0.9, 1], [0, 0.55]);
-  const quality: "low" | "high" = "high";
-  const [load, setLoad] = useState({ pct: 0, active: true });
-  const onLoad = useCallback((pct: number, active: boolean) => {
-    setLoad((prev) => (prev.pct === pct && prev.active === active ? prev : { pct, active }));
-  }, []);
   const activeName = selectedId
     ? (targetById(selectedId)?.title ?? selectedId.toUpperCase())
     : "—";
 
   return (
-    <div ref={scrollRef} className="relative h-[360vh] bg-[#030507]">
-      <div ref={inViewRef} className="sticky top-0 h-screen overflow-hidden">
+    <div ref={mountRef} className="relative h-[100svh] min-h-[640px] bg-[#030507]">
+      <div ref={inViewRef} className="absolute inset-0 overflow-hidden">
         <SolarErrorBoundary>
           {inView && (
             <Suspense fallback={null}>
               <SolarSystemCanvas
-                progress={progress}
                 reduce={!!reduce}
-                quality={quality}
+                quality="high"
                 selectedId={selectedId}
                 onSelect={setSelectedId}
                 onLoad={onLoad}
@@ -230,86 +207,77 @@ export function SolarSystemSection() {
           )}
         </SolarErrorBoundary>
 
-        <motion.div style={{ opacity: entryOpacity }} className="pointer-events-none absolute inset-0">
-          {/* Entry title */}
-          <motion.div
-            style={{ opacity: titleOpacity }}
-            className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center"
-          >
-            <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#F3F5F7]/55">
-              {OBSERVATORY.eyebrow}
-            </p>
-            <h3 className="font-observatory mt-4 text-[clamp(44px,9vw,132px)] uppercase leading-[0.9] text-[#F3F5F7]">
-              {OBSERVATORY.title}
-            </h3>
-            <p className="mt-4 max-w-[420px] text-[13px] leading-relaxed text-[#C5CBD2]/70">
-              {OBSERVATORY.sub}
-            </p>
-            <p className="mt-5 font-mono text-[9px] uppercase tracking-[0.22em] text-[#78818B]">
-              {OBSERVATORY.scaleNote}
-            </p>
-          </motion.div>
+        {/* Static title — always visible, no scroll choreography */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 flex flex-col items-center px-6 pt-24 text-center md:pt-20">
+          <p className="font-mono text-[9px] uppercase tracking-[0.3em] text-[#F3F5F7]/55 md:text-[10px]">
+            {OBSERVATORY.eyebrow}
+          </p>
+          <h3 className="font-observatory mt-3 text-[clamp(34px,6vw,84px)] uppercase leading-[0.9] text-[#F3F5F7]">
+            {OBSERVATORY.title}
+          </h3>
+          <p className="mt-3 max-w-[440px] text-[12px] leading-relaxed text-[#C5CBD2]/70 md:text-[13px]">
+            {OBSERVATORY.sub}
+          </p>
+        </div>
 
-          {/* Observatory HUD (PRD §26) */}
-          <motion.div style={{ opacity: hudOpacity }} className="absolute inset-0">
-            <div className="absolute left-6 top-16 flex flex-col gap-1.5 md:left-10">
-              <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#F3F5F7]/80">
-                MW / OBSERVATORY
-              </p>
-              <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#78818B]">
-                SECTION 11
-              </p>
-            </div>
-            <div className="absolute right-6 top-16 flex flex-col items-end gap-1.5 md:right-10">
-              <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#78818B]">
-                SYSTEM
-              </p>
-              <p className="font-mono text-[10px] uppercase tracking-[0.24em]" style={{ color: LIME }}>
-                ● {OBSERVATORY.status}
-              </p>
-            </div>
-            <div className="absolute bottom-6 left-6 flex flex-col gap-3 md:left-10">
-              <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[#78818B]">
-                SCROLL TO EXPLORE ↓
-              </p>
-              <div className="pointer-events-auto flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => step(-1)}
-                  aria-label="Target sebelumnya"
-                  className="rounded-[6px] border border-white/15 px-3 py-2 font-mono text-[11px] text-[#C5CBD2] transition-colors hover:border-white/40"
-                >
-                  ◀
-                </button>
-                <button
-                  type="button"
-                  onClick={() => step(1)}
-                  aria-label="Target berikutnya"
-                  className="rounded-[6px] border border-white/15 px-3 py-2 font-mono text-[11px] text-[#C5CBD2] transition-colors hover:border-white/40"
-                >
-                  ▶
-                </button>
-              </div>
-            </div>
-            <div className="absolute bottom-6 right-6 flex flex-col items-end gap-1.5 md:right-10">
-              <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#78818B]">
-                09 OBJECTS
-              </p>
-              <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#78818B]">
-                ACTIVE TARGET —{" "}
-                <span style={{ color: selectedId ? LIME : "#C5CBD2" }}>{activeName}</span>
-              </p>
-            </div>
-          </motion.div>
-        </motion.div>
+        {/* Observatory HUD */}
+        <div className="pointer-events-none absolute left-6 top-16 flex flex-col gap-1.5 md:left-10">
+          <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#F3F5F7]/80">
+            MW / OBSERVATORY
+          </p>
+          <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#78818B]">
+            SECTION 11
+          </p>
+        </div>
+        <div className="pointer-events-none absolute right-6 top-16 flex flex-col items-end gap-1.5 md:right-10">
+          <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#78818B]">
+            SYSTEM
+          </p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.24em]" style={{ color: LIME }}>
+            ● {OBSERVATORY.status}
+          </p>
+        </div>
+        <div className="absolute bottom-6 left-6 flex flex-col gap-3 md:left-10">
+          <p className="pointer-events-none font-mono text-[9px] uppercase tracking-[0.22em] text-[#78818B]">
+            CLICK A PLANET TO FOCUS
+          </p>
+          <div className="pointer-events-auto flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => step(-1)}
+              aria-label="Target sebelumnya"
+              className="rounded-[6px] border border-white/15 px-3 py-2 font-mono text-[11px] text-[#C5CBD2] transition-colors hover:border-white/40"
+            >
+              ◀
+            </button>
+            <button
+              type="button"
+              onClick={() => step(1)}
+              aria-label="Target berikutnya"
+              className="rounded-[6px] border border-white/15 px-3 py-2 font-mono text-[11px] text-[#C5CBD2] transition-colors hover:border-white/40"
+            >
+              ▶
+            </button>
+          </div>
+        </div>
+        <div className="pointer-events-none absolute bottom-6 right-6 flex flex-col items-end gap-1.5 md:right-10">
+          <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#78818B]">
+            09 OBJECTS
+          </p>
+          <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#78818B]">
+            ACTIVE TARGET —{" "}
+            <span style={{ color: selectedId ? LIME : "#C5CBD2" }}>{activeName}</span>
+          </p>
+          <p className="font-mono text-[8px] uppercase tracking-[0.2em] text-[#4C555F]">
+            {OBSERVATORY.scaleNote}
+          </p>
+        </div>
 
         {selectedId && <TargetPanel selectedId={selectedId} onClose={() => setSelectedId(null)} />}
 
-        <motion.div style={{ opacity: exitDim }} className="pointer-events-none absolute inset-0 bg-black" />
-
         {inView && <Loader pct={load.pct} active={load.active} />}
 
-        {/* SEO + screen-reader content (PRD §37/§35) */}
+        {/* SEO + screen-reader content */}
         <div className="sr-only">
           <h3>{OBSERVATORY.title} — {OBSERVATORY.sub}</h3>
           <p>{OBSERVATORY.scaleNote}</p>

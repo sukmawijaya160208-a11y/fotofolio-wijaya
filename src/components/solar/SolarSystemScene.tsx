@@ -33,26 +33,14 @@ function useGlowTexture() {
   }, []);
 }
 
-function lerpKeys(p: number, keys: [number, number][]) {
-  if (p <= keys[0][0]) return keys[0][1];
-  for (let i = 1; i < keys.length; i++) {
-    const [t0, v0] = keys[i - 1];
-    const [t1, v1] = keys[i];
-    if (p <= t1) return v0 + ((p - t0) / (t1 - t0)) * (v1 - v0);
-  }
-  return keys[keys.length - 1][1];
-}
-
 const ORIGIN = new THREE.Vector3(0, 0, 0);
 
 function CameraRig({
-  progress,
   reduce,
   selectedId,
   bodies,
   selectedRadius,
 }: {
-  progress: React.MutableRefObject<number>;
   reduce: boolean;
   selectedId: string | null;
   bodies: React.MutableRefObject<Registry>;
@@ -65,15 +53,17 @@ function CameraRig({
   const tmpDir = useRef(new THREE.Vector3());
   const weight = useRef(0);
 
+  // Fixed cinematic overview — no scroll choreography.
+  const BASE = useMemo(
+    () => new THREE.Vector3(Math.sin(0.3) * 10.5, 0.5, Math.cos(0.3) * 10.5),
+    [],
+  );
+
   useFrame(() => {
-    const p = reduce ? 0.3 : progress.current;
-    const z = lerpKeys(p, [[0, 17], [0.2, 13], [0.4, 10], [0.6, 8], [0.8, 5.5], [1, 4.2]]);
-    const a = lerpKeys(p, [[0, 0], [0.3, 0.1], [0.6, 0.45], [0.8, 0.6], [1, 0.72]]);
-    const y = lerpKeys(p, [[0, 0.8], [0.4, 0.2], [1, 0]]);
-    tmpCam.current.set(Math.sin(a) * z, y, Math.cos(a) * z);
+    tmpCam.current.copy(BASE);
     const lookTarget = ORIGIN;
 
-    const wantFocus = !reduce && selectedId && p < 0.88 ? 1 : 0;
+    const wantFocus = !reduce && selectedId ? 1 : 0;
     weight.current += (wantFocus - weight.current) * 0.045;
 
     if (weight.current > 0.01 && selectedId) {
@@ -84,10 +74,8 @@ function CameraRig({
         if (tmpDir.current.lengthSq() < 1e-4) tmpDir.current.set(0, 0, 1);
         tmpDir.current.normalize();
         const dist = selectedRadius * 8 + 1.5;
-        tmpCam.current
-          .copy(tmpWorld.current)
-          .addScaledVector(tmpDir.current, dist)
-          .add(tmpDir.current.clone().multiplyScalar(0).set(0, dist * 0.32, 0));
+        tmpCam.current.copy(tmpWorld.current).addScaledVector(tmpDir.current, dist);
+        tmpCam.current.y += dist * 0.32;
         lookTarget.copy(tmpWorld.current);
       }
     }
@@ -365,14 +353,12 @@ function TrackProgress({ onProgress }: { onProgress: (pct: number, active: boole
 }
 
 function Scene({
-  progress,
   reduce,
   quality,
   selectedId,
   onSelect,
   onLoad,
 }: {
-  progress: React.MutableRefObject<number>;
   reduce: boolean;
   quality: Quality;
   selectedId: string | null;
@@ -391,7 +377,7 @@ function Scene({
       <ambientLight intensity={0.14} />
       <hemisphereLight args={["#24313d", "#0a0e12", 0.3]} />
       <directionalLight position={[6, 8, 4]} intensity={0.22} color="#8fa3b0" />
-      <CameraRig progress={progress} reduce={reduce} selectedId={selectedId} bodies={bodies} selectedRadius={selectedRadius} />
+      <CameraRig reduce={reduce} selectedId={selectedId} bodies={bodies} selectedRadius={selectedRadius} />
       <Sun bodies={bodies} reduce={reduce} />
       {celestialBodies.map((b) => (
         <Planet
@@ -411,14 +397,12 @@ function Scene({
 }
 
 export function SolarSystemCanvas({
-  progress,
   reduce,
   quality,
   selectedId,
   onSelect,
   onLoad,
 }: {
-  progress: React.MutableRefObject<number>;
   reduce: boolean;
   quality: Quality;
   selectedId: string | null;
@@ -434,7 +418,7 @@ export function SolarSystemCanvas({
       onPointerMissed={() => onSelect(null)}
     >
       <Suspense fallback={null}>
-        <Scene progress={progress} reduce={reduce} quality={quality} selectedId={selectedId} onSelect={onSelect} onLoad={onLoad} />
+        <Scene reduce={reduce} quality={quality} selectedId={selectedId} onSelect={onSelect} onLoad={onLoad} />
       </Suspense>
     </Canvas>
   );
