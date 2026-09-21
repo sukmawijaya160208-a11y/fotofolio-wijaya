@@ -1,94 +1,108 @@
+import { useRef, useState } from "react";
 import { projects } from "../../data/projects";
 import { PortfolioSection } from "../shared/PortfolioSection";
 import { Reveal } from "../shared/Reveal";
 import { ArrowUpRight } from "lucide-react";
-import { HudLine, MicroLabel, TechnicalCorner } from "../shared/decorations";
+import { HudLine, MicroLabel } from "../shared/decorations";
 
-type ProjectCardProps = {
-  project: (typeof projects)[number];
-  index: number;
-  variant: "featured" | "half" | "strip";
-  delay: number;
-};
+type Project = (typeof projects)[number];
 
-function ProjectCard({ project, index, variant, delay }: ProjectCardProps) {
-  const isFeatured = variant === "featured";
-  const isStrip = variant === "strip";
+function RowMeta({ project }: { project: Project }) {
   return (
-    <Reveal
-      variant="fade"
-      delay={delay}
-      className={`group relative overflow-hidden rounded-[18px] border border-line bg-paper shadow-[0_14px_36px_rgba(23,35,45,.12)] transition-[box-shadow] duration-300 hover:shadow-[0_22px_54px_rgba(23,35,45,.2)] ${
-        isFeatured
-          ? "lg:col-span-7 lg:row-span-2"
-          : isStrip
-            ? "lg:col-span-12"
-            : "lg:col-span-5"
-      }`}
+    <span className="flex items-center gap-3">
+      <MicroLabel className="text-muted">{project.category}</MicroLabel>
+      <span className="h-3 w-px bg-line" aria-hidden="true" />
+      <MicroLabel className="text-muted">{project.year}</MicroLabel>
+    </span>
+  );
+}
+
+function ProjectRow({
+  project,
+  index,
+  onEnter,
+}: {
+  project: Project;
+  index: number;
+  onEnter: () => void;
+}) {
+  return (
+    <article
+      onMouseEnter={onEnter}
+      className="group relative border-t border-line transition-colors duration-300 last:border-b hover:bg-paper/60"
     >
-      <div className={`relative overflow-hidden ${isFeatured ? "h-[230px] md:h-[300px] lg:h-full lg:min-h-[440px]" : isStrip ? "h-[180px] md:h-[220px]" : "h-[200px] md:h-[230px]"}`}>
+      {/* Mobile / touch: inline image */}
+      <div className="overflow-hidden px-1 pt-5 lg:hidden">
         <img
           src={project.image}
           alt={`Pratinjau proyek ${project.title}`}
-          width={isFeatured ? 900 : 600}
-          height={isFeatured ? 600 : 400}
+          width={800}
+          height={450}
           loading={index < 2 ? "eager" : "lazy"}
           decoding="async"
-          className="h-full w-full object-cover grayscale transition-transform duration-[800ms] ease-out group-hover:scale-105 group-hover:grayscale-0"
+          className="aspect-[16/9] w-full rounded-[12px] border border-line object-cover grayscale"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-panel/85 via-panel/25 to-transparent" />
-        <TechnicalCorner variant="top-right" size={13} />
-        <span className="absolute right-4 top-4 font-display text-2xl leading-none text-paper/90 drop-shadow">
+      </div>
+
+      <div className="flex items-baseline gap-4 px-1 py-5 md:gap-6 md:py-6">
+        <span className="w-8 shrink-0 font-mono text-[11px] tracking-[0.16em] text-gold">
           {String(index + 1).padStart(2, "0")}
         </span>
-        {project.featured && (
-          <span className="absolute left-4 top-4 rounded-sm bg-gold px-2 py-1 font-mono text-[8.5px] font-medium uppercase tracking-[0.18em] text-panel">
-            Featured
-          </span>
-        )}
-      </div>
-      <div className="absolute bottom-0 left-0 right-0 p-5 md:p-6">
-        <div className="flex items-center gap-3">
-          <MicroLabel className="text-paper/70">{project.category}</MicroLabel>
-          <span className="h-3 w-px bg-paper/35" />
-          <MicroLabel className="text-paper/55">{project.year}</MicroLabel>
-        </div>
-        <h3
-          className={`mt-2 font-display uppercase leading-none text-paper drop-shadow ${
-            isFeatured ? "text-4xl md:text-5xl" : "text-2xl"
-          }`}
-        >
-          {project.title}
-        </h3>
-        <p className="mt-2.5 max-w-[520px] text-[12.5px] leading-relaxed text-paper/75">
-          {project.description}
-        </p>
-        <div className="mt-3.5 flex flex-wrap items-center gap-1.5">
-          {project.tags.map((t) => (
-            <span
-              key={t}
-              className="rounded-sm border border-paper/20 bg-paper/[0.08] px-2 py-1 font-mono text-[8.5px] uppercase tracking-[0.16em] text-paper/70"
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2.5">
+            {project.featured && (
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-gold" aria-hidden="true" />
+            )}
+            <h3 className="truncate font-display text-[clamp(28px,4.5vw,60px)] uppercase leading-[0.95] text-ink transition-transform duration-300 ease-out group-hover:translate-x-2">
+              {project.title}
+            </h3>
+          </div>
+          <p className="mt-2 font-mono text-[9.5px] uppercase leading-relaxed tracking-[0.14em] text-muted">
+            {project.tags.join(" · ")}
+          </p>
+          {project.caseStudyId && (
+            <a
+              href="#case-study"
+              className="mt-2.5 inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-burgundy transition-colors hover:text-ink"
             >
-              {t}
-            </span>
-          ))}
+              VIEW CASE STUDY <ArrowUpRight size={12} strokeWidth={2} />
+            </a>
+          )}
         </div>
-        {project.caseStudyId && (
-          <a
-            href="#case-study"
-            className="mt-4 inline-flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.16em] text-gold transition-colors hover:text-paper"
-          >
-            VIEW CASE STUDY <ArrowUpRight size={13} strokeWidth={2} />
-          </a>
-        )}
+        <div className="hidden shrink-0 flex-col items-end gap-2 sm:flex">
+          <RowMeta project={project} />
+          <ArrowUpRight
+            size={22}
+            strokeWidth={1.5}
+            aria-hidden="true"
+            className="text-tech transition-all duration-300 group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-burgundy"
+          />
+        </div>
       </div>
-    </Reveal>
+    </article>
   );
 }
 
 export function ProjectsSection() {
-  const featured = projects.find((p) => p.featured) ?? projects[0];
-  const rest = projects.filter((p) => p.id !== featured.id);
+  const [active, setActive] = useState<number | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const previewRef = useRef<HTMLDivElement | null>(null);
+  const finePointer = useRef(
+    typeof window !== "undefined" &&
+      window.matchMedia("(hover: hover) and (pointer: fine)").matches,
+  );
+
+  const onMove = (e: React.MouseEvent) => {
+    if (!finePointer.current) return;
+    const list = listRef.current;
+    const prev = previewRef.current;
+    if (!list || !prev) return;
+    const r = list.getBoundingClientRect();
+    const x = e.clientX - r.left;
+    const y = e.clientY - r.top;
+    prev.style.transform = `translate(${x + 28}px, ${y - 110}px)`;
+  };
+
   return (
     <PortfolioSection
       id="projects"
@@ -106,20 +120,57 @@ export function ProjectsSection() {
               SELECTED WORKS
             </h2>
           </div>
-          <p className="max-w-[300px] font-mono text-[10.5px] leading-relaxed text-muted">
-            Kumpulan proyek terpilih. Ganti dengan karya nyata di src/data/projects.ts
-          </p>
+          <div className="flex items-baseline gap-4">
+            <span className="font-mono text-[11px] tracking-[0.2em] text-gold">
+              {String(projects.length).padStart(2, "0")}
+            </span>
+            <p className="max-w-[300px] font-mono text-[10.5px] leading-relaxed text-muted">
+              Kumpulan proyek terpilih. Ganti dengan karya nyata di src/data/projects.ts
+            </p>
+          </div>
         </Reveal>
         <HudLine className="mb-8" width="100%" />
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-          <ProjectCard project={featured} index={0} variant="featured" delay={0.1} />
-          {rest.slice(0, 2).map((p, i) => (
-            <ProjectCard key={p.id} project={p} index={i + 1} variant="half" delay={0.2 + i * 0.08} />
+
+        <div
+          ref={listRef}
+          onMouseMove={onMove}
+          onMouseLeave={() => setActive(null)}
+          className="relative"
+        >
+          {/* Floating preview — desktop fine-pointer only */}
+          <div
+            ref={previewRef}
+            aria-hidden="true"
+            className={`pointer-events-none absolute left-0 top-0 z-20 hidden h-[220px] w-[300px] overflow-hidden rounded-[14px] border border-line shadow-[0_24px_60px_rgba(23,35,45,.3)] transition-opacity duration-300 lg:block ${
+              active === null ? "opacity-0" : "opacity-100"
+            }`}
+          >
+            {projects.map((p, i) => (
+              <img
+                key={p.id}
+                src={p.image}
+                alt=""
+                width={600}
+                height={440}
+                loading="lazy"
+                decoding="async"
+                className={`absolute inset-0 h-full w-full object-cover grayscale transition-opacity duration-300 ${
+                  active === i ? "opacity-100" : "opacity-0"
+                }`}
+              />
+            ))}
+          </div>
+
+          {projects.map((p, i) => (
+            <ProjectRow key={p.id} project={p} index={i} onEnter={() => setActive(i)} />
           ))}
-          {rest[2] && (
-            <ProjectCard project={rest[2]} index={3} variant="strip" delay={0.38} />
-          )}
         </div>
+
+        <Reveal variant="fade" delay={0.1} className="mt-8 flex items-center gap-4">
+          <span className="h-px flex-1 bg-line" aria-hidden="true" />
+          <MicroLabel className="text-muted">PROJECT INDEX — {projects.length} ENTRIES</MicroLabel>
+          <span className="h-px flex-1 bg-line" aria-hidden="true" />
+        </Reveal>
       </div>
     </PortfolioSection>
   );
