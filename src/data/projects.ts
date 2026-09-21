@@ -19,7 +19,7 @@ export const projects: Project[] = [
     year: "2026",
     category: "WEBSITE",
     description:
-      "Website bertema anime. Detail proyek menyusul dari owner.",
+      "Direktori anime yang cepat dan gampang dijelajah — React + TypeScript, mobile-first. Bedah lengkap di case study.",
     image: "/assets/project-01.webp",
     tags: ["React", "TypeScript"],
     featured: true,

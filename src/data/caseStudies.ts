@@ -14,26 +14,31 @@ export type CaseStudy = {
   metrics: { value: string; label: string }[];
 };
 
-// TODO: replace with a real case study — this is an editable placeholder.
+// Featured case — WEBSITE ANIME (foto + judul asli dari owner).
+// Narasi ditulis sejalan dengan data proyek yang ada; tanpa klaim klien/metrik.
 export const caseStudy: CaseStudy = {
   id: "case-01",
   index: "01",
-  title: "PROJECT NAME",
+  title: "WEBSITE ANIME",
   category: "CASE STUDY",
   image: "/assets/case-study.webp",
-  role: "ROLE",
-  tools: ["Tool", "Tool", "Tool"],
-  duration: "XX MINGGU",
+  role: "FRONTEND DEVELOPER",
+  tools: ["React", "TypeScript"],
+  duration: "—",
   challenge:
-    "Tantangan belum diisi. Jelaskan masalah yang diselesaikan pada proyek ini di src/data/caseStudies.ts.",
+    "Penggemar anime butuh direktori yang cepat dibuka dan gampang dijelajah — bukan halaman berat dengan navigasi berantakan yang bikin pengunjung kabur sebelum menemukan tontonan.",
   solution:
-    "Solusi belum diisi. Jelaskan pendekatan dan keputusan teknis yang diambil.",
-  process: ["LANGKAH 01", "LANGKAH 02", "LANGKAH 03"],
+    "Single-page experience berbasis React + TypeScript: komponen tertata rapi, data terpusat, dan layout mobile-first supaya katalog tetap ringan dibuka dari HP maupun laptop.",
+  process: [
+    "Riset konten & susun struktur katalog",
+    "Bangun antarmuka berbasis komponen",
+    "Uji coba lintas perangkat & rapikan",
+  ],
   result:
-    "Hasil belum diisi. Jelaskan outcome dan dampak dari solusi yang dibangun.",
+    "Katalog anime yang cepat, rapi, dan nyaman dijelajah — fondasi yang mudah dikembangkan ke fitur lanjutan seperti pencarian dan filter.",
   metrics: [
-    { value: "XX", label: "METRIC" },
-    { value: "XX", label: "METRIC" },
-    { value: "XX", label: "METRIC" },
+    { value: "2026", label: "YEAR" },
+    { value: "01", label: "FEATURED CASE" },
+    { value: "ID", label: "REGION" },
   ],
 };

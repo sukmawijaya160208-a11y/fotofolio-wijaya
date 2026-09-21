@@ -42,7 +42,7 @@ function BlueprintOverlay() {
         CASE / {caseStudy.index} · FRAME 16:9
       </span>
       <span className="absolute bottom-4 right-5 font-mono text-[9px] tracking-[0.2em] text-paper/55">
-        IMAGE SLOT — ASSET PENDING
+        {caseStudy.title} — {caseStudy.metrics[0].value}
       </span>
     </div>
   );
