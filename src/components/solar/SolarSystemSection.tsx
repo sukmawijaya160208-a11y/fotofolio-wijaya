@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { useReducedMotion } from "framer-motion";
-import { OBSERVATORY, celestialBodies } from "../../data/solarSystem";
+import { OBSERVATORY, TEXTURE_CREDIT, celestialBodies } from "../../data/solarSystem";
 import { portfolioTargets, targetById } from "../../data/portfolioMap";
 import { useInView } from "../../lib/useInView";
 import { LIME } from "./solarTheme";
@@ -239,7 +239,7 @@ export function SolarSystemSection() {
         </div>
         <div className="absolute bottom-6 left-6 flex flex-col gap-3 md:left-10">
           <p className="pointer-events-none font-mono text-[9px] uppercase tracking-[0.22em] text-[#78818B]">
-            CLICK A PLANET TO FOCUS
+            DRAG TO ORBIT · SCROLL TO ZOOM · CLICK TO FOCUS
           </p>
           <div className="pointer-events-auto flex items-center gap-2">
             <button
@@ -281,6 +281,7 @@ export function SolarSystemSection() {
         <div className="sr-only">
           <h3>{OBSERVATORY.title} — {OBSERVATORY.sub}</h3>
           <p>{OBSERVATORY.scaleNote}</p>
+          <p>{TEXTURE_CREDIT}</p>
           <ul>
             {portfolioTargets.map((t) => (
               <li key={t.id}>

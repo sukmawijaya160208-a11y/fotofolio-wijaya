@@ -1,9 +1,11 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Billboard, Html, Line, useProgress, useTexture } from "@react-three/drei";
+import { Billboard, Html, Line, OrbitControls, useProgress, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import {
   EARTH_CLOUDS_TEXTURE,
+  EARTH_NIGHT_TEXTURE,
+  MILKY_WAY_TEXTURE,
   OBSERVATORY,
   SATURN_RING_TEXTURE,
   SUN_TEXTURE,
@@ -14,6 +16,9 @@ import { LIME, type SolarQuality } from "./solarTheme";
 
 type Quality = SolarQuality;
 type Registry = Map<string, THREE.Object3D>;
+/** Shared drive state: user orbiting + intro dolly. */
+type Drive = { user: boolean; intro: boolean };
+type Controls = { enabled: boolean; target: THREE.Vector3 } | null;
 
 function useGlowTexture() {
   return useMemo(() => {
@@ -40,11 +45,15 @@ function CameraRig({
   selectedId,
   bodies,
   selectedRadius,
+  drive,
+  controls,
 }: {
   reduce: boolean;
   selectedId: string | null;
   bodies: React.MutableRefObject<Registry>;
   selectedRadius: number;
+  drive: React.MutableRefObject<Drive>;
+  controls: React.MutableRefObject<Controls>;
 }) {
   const { camera } = useThree();
   const look = useRef(new THREE.Vector3(0, 0, 0));
@@ -53,35 +62,60 @@ function CameraRig({
   const tmpDir = useRef(new THREE.Vector3());
   const weight = useRef(0);
 
-  // Fixed cinematic overview — no scroll choreography.
+  // Fixed cinematic overview.
   const BASE = useMemo(
     () => new THREE.Vector3(Math.sin(0.3) * 10.5, 0.5, Math.cos(0.3) * 10.5),
     [],
   );
 
   useFrame(() => {
-    tmpCam.current.copy(BASE);
-    const lookTarget = ORIGIN;
-
+    const ctl = controls.current;
     const wantFocus = !reduce && selectedId ? 1 : 0;
     weight.current += (wantFocus - weight.current) * 0.045;
+    const transitioning = weight.current > 0.02 && weight.current < 0.98;
 
-    if (weight.current > 0.01 && selectedId) {
+    if (!drive.current.intro) {
+      // Intro dolly: far → overview, then hand over to the user.
+      tmpCam.current.copy(BASE);
+      camera.position.lerp(tmpCam.current, 0.035);
+      look.current.lerp(ORIGIN, 0.06);
+      camera.lookAt(look.current);
+      if (ctl) ctl.enabled = false;
+      if (camera.position.distanceTo(BASE) < 0.3) drive.current.intro = true;
+      return;
+    }
+
+    let focusPos: THREE.Vector3 | null = null;
+    if ((transitioning || weight.current >= 0.98) && selectedId) {
       const obj = bodies.current.get(selectedId);
       if (obj) {
         obj.getWorldPosition(tmpWorld.current);
+        focusPos = tmpWorld.current;
         tmpDir.current.copy(tmpWorld.current).setY(0);
         if (tmpDir.current.lengthSq() < 1e-4) tmpDir.current.set(0, 0, 1);
         tmpDir.current.normalize();
         const dist = selectedRadius * 8 + 1.5;
         tmpCam.current.copy(tmpWorld.current).addScaledVector(tmpDir.current, dist);
         tmpCam.current.y += dist * 0.32;
-        lookTarget.copy(tmpWorld.current);
       }
     }
 
-    camera.position.lerp(tmpCam.current, 0.06);
-    look.current.lerp(lookTarget, 0.06 + weight.current * 0.02);
+    if (transitioning || !drive.current.user) {
+      // Dolly (or untouched overview): rig owns the camera.
+      if (!focusPos) tmpCam.current.copy(BASE);
+      camera.position.lerp(tmpCam.current, 0.06);
+      if (ctl) ctl.enabled = false;
+    } else if (ctl) {
+      ctl.enabled = true;
+    }
+
+    if (focusPos) {
+      look.current.lerp(focusPos, 0.08 + weight.current * 0.02);
+      if (ctl && !transitioning) ctl.target.lerp(focusPos, 0.25);
+    } else {
+      look.current.lerp(ORIGIN, 0.06);
+      if (ctl && !transitioning) ctl.target.lerp(ORIGIN, 0.1);
+    }
     camera.lookAt(look.current);
   });
   return null;
@@ -176,6 +210,7 @@ function Planet({
   const tex = useTexture(body.texture);
   const cloudsTex = useTexture(body.clouds ? EARTH_CLOUDS_TEXTURE : body.texture);
   const ringTex = useTexture(body.ring ? SATURN_RING_TEXTURE : body.texture);
+  const nightTex = useTexture(body.id === "earth" ? EARTH_NIGHT_TEXTURE : body.texture);
   const swing = useRef<THREE.Group>(null);
   const spin = useRef<THREE.Group>(null);
   const mesh = useRef<THREE.Mesh>(null);
@@ -191,7 +226,7 @@ function Planet({
 
   useMemo(() => {
     tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = 4;
+    tex.anisotropy = 8;
   }, [tex]);
 
   useEffect(() => {
@@ -259,6 +294,9 @@ function Planet({
                   color={dimmed ? "#5a6068" : "#ffffff"}
                   roughness={0.92}
                   metalness={0.04}
+                  emissiveMap={body.id === "earth" ? nightTex : undefined}
+                  emissive={body.id === "earth" ? "#fff2c8" : "#000000"}
+                  emissiveIntensity={body.id === "earth" ? 1.15 : 0}
                 />
               </mesh>
               {body.clouds && (
@@ -339,6 +377,24 @@ function StarField({ count, reduce }: { count: number; reduce: boolean }) {
   );
 }
 
+function MilkyWay({ reduce }: { reduce: boolean }) {
+  const tex = useTexture(MILKY_WAY_TEXTURE);
+  const ref = useRef<THREE.Mesh>(null);
+  useMemo(() => {
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
+  }, [tex]);
+  useFrame((_, dt) => {
+    if (ref.current && !reduce) ref.current.rotation.y += dt * 0.004;
+  });
+  return (
+    <mesh ref={ref}>
+      <sphereGeometry args={[150, 48, 32]} />
+      <meshBasicMaterial map={tex} side={THREE.BackSide} toneMapped={false} color="#8f8f8f" depthWrite={false} />
+    </mesh>
+  );
+}
+
 function TrackProgress({ onProgress }: { onProgress: (pct: number, active: boolean) => void }) {
   const { progress, active } = useProgress();
   const last = useRef(-1);
@@ -366,6 +422,8 @@ function Scene({
   onLoad: (pct: number, active: boolean) => void;
 }) {
   const bodies = useRef<Registry>(new Map());
+  const drive = useRef<Drive>({ user: false, intro: false });
+  const controls = useRef<Controls>(null);
   const selectedRadius =
     selectedId === "sun"
       ? 0.72
@@ -377,7 +435,23 @@ function Scene({
       <ambientLight intensity={0.14} />
       <hemisphereLight args={["#24313d", "#0a0e12", 0.3]} />
       <directionalLight position={[6, 8, 4]} intensity={0.22} color="#8fa3b0" />
-      <CameraRig reduce={reduce} selectedId={selectedId} bodies={bodies} selectedRadius={selectedRadius} />
+      <OrbitControls
+        ref={controls as never}
+        makeDefault
+        enablePan={false}
+        enableDamping
+        dampingFactor={0.08}
+        rotateSpeed={0.55}
+        zoomSpeed={0.8}
+        minDistance={2.2}
+        maxDistance={34}
+        onStart={() => {
+          drive.current.user = true;
+          drive.current.intro = true;
+        }}
+      />
+      <CameraRig reduce={reduce} selectedId={selectedId} bodies={bodies} selectedRadius={selectedRadius} drive={drive} controls={controls} />
+      <MilkyWay reduce={reduce} />
       <Sun bodies={bodies} reduce={reduce} />
       {celestialBodies.map((b) => (
         <Planet
@@ -414,7 +488,7 @@ export function SolarSystemCanvas({
       className="absolute inset-0"
       dpr={quality === "low" ? 1 : [1, 2]}
       gl={{ antialias: true, powerPreference: "high-performance" }}
-      camera={{ position: [0, 0.8, 17], fov: 50, near: 0.1, far: 80 }}
+      camera={{ position: [0, 3, 30], fov: 50, near: 0.1, far: 400 }}
       onPointerMissed={() => onSelect(null)}
     >
       <Suspense fallback={null}>
