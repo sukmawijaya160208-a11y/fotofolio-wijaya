@@ -16,8 +16,6 @@ import { LIME, type SolarQuality } from "./solarTheme";
 
 type Quality = SolarQuality;
 type Registry = Map<string, THREE.Object3D>;
-/** Shared drive state: user orbiting + intro dolly. */
-type Drive = { user: boolean; intro: boolean };
 type Controls = { enabled: boolean; target: THREE.Vector3 } | null;
 
 function useGlowTexture() {
@@ -45,14 +43,12 @@ function CameraRig({
   selectedId,
   bodies,
   selectedRadius,
-  drive,
   controls,
 }: {
   reduce: boolean;
   selectedId: string | null;
   bodies: React.MutableRefObject<Registry>;
   selectedRadius: number;
-  drive: React.MutableRefObject<Drive>;
   controls: React.MutableRefObject<Controls>;
 }) {
   const { camera } = useThree();
@@ -62,7 +58,8 @@ function CameraRig({
   const tmpDir = useRef(new THREE.Vector3());
   const weight = useRef(0);
 
-  // Fixed cinematic overview.
+  // Fixed cinematic overview. The rig ONLY drives the camera during focus
+  // transitions — otherwise OrbitControls fully owns it (no fighting).
   const BASE = useMemo(
     () => new THREE.Vector3(Math.sin(0.3) * 10.5, 0.5, Math.cos(0.3) * 10.5),
     [],
@@ -74,49 +71,41 @@ function CameraRig({
     weight.current += (wantFocus - weight.current) * 0.045;
     const transitioning = weight.current > 0.02 && weight.current < 0.98;
 
-    if (!drive.current.intro) {
-      // Intro dolly: far → overview, then hand over to the user.
-      tmpCam.current.copy(BASE);
-      camera.position.lerp(tmpCam.current, 0.035);
-      look.current.lerp(ORIGIN, 0.06);
-      camera.lookAt(look.current);
-      if (ctl) ctl.enabled = false;
-      if (camera.position.distanceTo(BASE) < 0.3) drive.current.intro = true;
-      return;
-    }
-
     let focusPos: THREE.Vector3 | null = null;
-    if ((transitioning || weight.current >= 0.98) && selectedId) {
+    if (selectedId) {
       const obj = bodies.current.get(selectedId);
       if (obj) {
         obj.getWorldPosition(tmpWorld.current);
         focusPos = tmpWorld.current;
-        tmpDir.current.copy(tmpWorld.current).setY(0);
-        if (tmpDir.current.lengthSq() < 1e-4) tmpDir.current.set(0, 0, 1);
-        tmpDir.current.normalize();
-        const dist = selectedRadius * 8 + 1.5;
-        tmpCam.current.copy(tmpWorld.current).addScaledVector(tmpDir.current, dist);
-        tmpCam.current.y += dist * 0.32;
       }
     }
 
-    if (transitioning || !drive.current.user) {
-      // Dolly (or untouched overview): rig owns the camera.
-      if (!focusPos) tmpCam.current.copy(BASE);
+    if (transitioning) {
+      // Dolly in/out: rig owns camera + orientation.
+      if (focusPos) {
+        tmpDir.current.copy(focusPos).setY(0);
+        if (tmpDir.current.lengthSq() < 1e-4) tmpDir.current.set(0, 0, 1);
+        tmpDir.current.normalize();
+        const dist = selectedRadius * 8 + 1.5;
+        tmpCam.current.copy(focusPos).addScaledVector(tmpDir.current, dist);
+        tmpCam.current.y += dist * 0.32;
+      } else {
+        tmpCam.current.copy(BASE);
+      }
       camera.position.lerp(tmpCam.current, 0.06);
       if (ctl) ctl.enabled = false;
-    } else if (ctl) {
-      ctl.enabled = true;
+      look.current.lerp(focusPos ?? ORIGIN, 0.08);
+      camera.lookAt(look.current);
+      return;
     }
 
-    if (focusPos) {
-      look.current.lerp(focusPos, 0.08 + weight.current * 0.02);
-      if (ctl && !transitioning) ctl.target.lerp(focusPos, 0.25);
-    } else {
-      look.current.lerp(ORIGIN, 0.06);
-      if (ctl && !transitioning) ctl.target.lerp(ORIGIN, 0.1);
+    // Free mode: controls own camera + orientation. Rig only trails the
+    // controls target so an engaged focus follows a moving planet.
+    if (ctl) {
+      ctl.enabled = true;
+      if (focusPos) ctl.target.lerp(focusPos, 0.25);
+      else ctl.target.lerp(ORIGIN, 0.1);
     }
-    camera.lookAt(look.current);
   });
   return null;
 }
@@ -160,7 +149,7 @@ function Sun({
         <spriteMaterial map={glow} transparent blending={THREE.AdditiveBlending} depthWrite={false} opacity={0.85} />
       </sprite>
       <pointLight color="#fff0d0" intensity={5} distance={36} decay={1.4} />
-      <Html center position={[0, -1.05, 0]} className="pointer-events-none select-none">
+      <Html center position={[0, -1.05, 0]} wrapperClass="solar-label" className="pointer-events-none select-none">
         <span className="whitespace-nowrap font-mono text-[8.5px] tracking-[0.28em] text-[#F3F5F7]/50">
           {OBSERVATORY.system}
         </span>
@@ -284,6 +273,10 @@ function Planet({
                   document.body.style.cursor = "auto";
                 }}
                 onPointerDown={(e) => {
+                  // Reserve press for OrbitControls drag; select on click.
+                  e.stopPropagation();
+                }}
+                onClick={(e) => {
                   e.stopPropagation();
                   onSelect(selected ? null : body.id);
                 }}
@@ -325,6 +318,7 @@ function Planet({
           <Html
             position={[0, size + (body.ring ? size * 1.4 : 0.42), 0]}
             center
+            wrapperClass="solar-label"
             className="pointer-events-none select-none"
             style={{ opacity: hovered || selected ? 1 : 0.55, transition: "opacity .25s" }}
           >
@@ -422,7 +416,6 @@ function Scene({
   onLoad: (pct: number, active: boolean) => void;
 }) {
   const bodies = useRef<Registry>(new Map());
-  const drive = useRef<Drive>({ user: false, intro: false });
   const controls = useRef<Controls>(null);
   const selectedRadius =
     selectedId === "sun"
@@ -445,12 +438,8 @@ function Scene({
         zoomSpeed={0.8}
         minDistance={2.2}
         maxDistance={34}
-        onStart={() => {
-          drive.current.user = true;
-          drive.current.intro = true;
-        }}
       />
-      <CameraRig reduce={reduce} selectedId={selectedId} bodies={bodies} selectedRadius={selectedRadius} drive={drive} controls={controls} />
+      <CameraRig reduce={reduce} selectedId={selectedId} bodies={bodies} selectedRadius={selectedRadius} controls={controls} />
       <MilkyWay reduce={reduce} />
       <Sun bodies={bodies} reduce={reduce} />
       {celestialBodies.map((b) => (
@@ -488,7 +477,7 @@ export function SolarSystemCanvas({
       className="absolute inset-0"
       dpr={quality === "low" ? 1 : [1, 2]}
       gl={{ antialias: true, powerPreference: "high-performance" }}
-      camera={{ position: [0, 3, 30], fov: 50, near: 0.1, far: 400 }}
+      camera={{ position: [3.1, 0.5, 10.0], fov: 50, near: 0.1, far: 400 }}
       onPointerMissed={() => onSelect(null)}
     >
       <Suspense fallback={null}>

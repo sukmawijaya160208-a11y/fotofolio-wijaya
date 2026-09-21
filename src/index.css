@@ -77,6 +77,11 @@ body {
   letter-spacing: 0.01em;
 }
 
+/* drei <Html> overlay wrappers must never swallow canvas drags */
+.solar-label {
+  pointer-events: none !important;
+}
+
 .title-extrude {
   color: #fdfdfe;
   text-shadow:
