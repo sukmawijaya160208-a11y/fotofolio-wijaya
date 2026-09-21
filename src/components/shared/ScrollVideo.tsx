@@ -9,7 +9,16 @@ import { useInView } from "../../lib/useInView";
  * - src dipasang hanya saat section dekat viewport (lazy).
  * - reduced-motion / error → frame pertama statis / background polos.
  */
-export function ScrollVideo({ src, label }: { src: string; label: string }) {
+export function ScrollVideo({
+  src,
+  label,
+  targetRef,
+}: {
+  src: string;
+  label: string;
+  /** Elemen yang progres scroll-nya dipetakan ke durasi video. Default: boks video sendiri (mode transit). Untuk mode pinned, kirim ref kontainer tinggi dari parent. */
+  targetRef?: React.RefObject<HTMLElement | null>;
+}) {
   const reduce = useReducedMotion();
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -22,7 +31,7 @@ export function ScrollVideo({ src, label }: { src: string; label: string }) {
   const current = useRef(0);
 
   const { scrollYProgress } = useScroll({
-    target: wrapRef,
+    target: targetRef ?? wrapRef,
     offset: ["start end", "end start"],
   });
 
