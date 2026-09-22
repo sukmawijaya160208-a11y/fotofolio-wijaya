@@ -133,7 +133,12 @@ export function EducationSection() {
       className="flex items-center py-[var(--section-pad)]"
       minHeight="100vh"
     >
-      <ScrollVideo src="/assets/education-bg.mp4" label="Video latar pendidikan" />
+      <ScrollVideo
+        src="/assets/education-bg.mp4"
+        srcMobile="/assets/education-bg-m.mp4"
+        poster="/assets/education-bg-poster.webp"
+        label="Video latar pendidikan"
+      />
       {/* Edge gradients only — tengah dibiarkan cerah sesuai permintaan */}
       <div
         className="pointer-events-none absolute inset-0 z-[5]"

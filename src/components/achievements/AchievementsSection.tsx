@@ -44,9 +44,15 @@ export function AchievementsSection() {
       </h2>
 
       <div ref={tallRef} className={`relative ${TALL}`}>
-        <div className="sticky top-0 flex h-screen flex-col justify-end">
+        <div className="sticky top-0 flex h-[100svh] flex-col justify-end">
           <div className="absolute inset-0 overflow-hidden">
-            <ScrollVideo src="/assets/highlight.mp4" label="Video highlight" targetRef={tallRef} />
+            <ScrollVideo
+              src="/assets/highlight.mp4"
+              srcMobile="/assets/highlight-m.mp4"
+              poster="/assets/highlight-poster.webp"
+              label="Video highlight"
+              targetRef={tallRef}
+            />
             <div
               className="pointer-events-none absolute inset-0"
               aria-hidden="true"

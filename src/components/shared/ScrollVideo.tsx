@@ -5,16 +5,24 @@ import { useInView } from "../../lib/useInView";
 /**
  * Background video yang di-scrub oleh scroll (turun = maju, naik = mundur).
  * - Tidak pernah play(): frame digerakkan via currentTime → lolos autoplay policy.
- * - Target di-lerp via rAF (0.12) → gerak smooth, no stutter.
+ * - Target di-lerp via rAF → gerak smooth, no stutter.
  * - src dipasang hanya saat section dekat viewport (lazy).
+ * - HP (<768px): file ringan + lerp agresif (gercep) + seek hanya saat
+ *   decoder siap (readyState) → no lag, no stall.
  * - reduced-motion / error → frame pertama statis / background polos.
  */
 export function ScrollVideo({
   src,
+  srcMobile,
+  poster,
   label,
   targetRef,
 }: {
   src: string;
+  /** Versi ringan untuk HP (dipilih otomatis di bawah 768px). */
+  srcMobile?: string;
+  /** Frame pembuka instan selagi video buffer. */
+  poster?: string;
   label: string;
   /** Elemen yang progres scroll-nya dipetakan ke durasi video. Default: boks video sendiri (mode transit). Untuk mode pinned, kirim ref kontainer tinggi dari parent. */
   targetRef?: React.RefObject<HTMLElement | null>;
@@ -29,6 +37,11 @@ export function ScrollVideo({
   nearRef.current = near.inView;
   const target = useRef(0);
   const current = useRef(0);
+  const mobile =
+    typeof window !== "undefined" && window.innerWidth < 768;
+  const file = mobile && srcMobile ? srcMobile : src;
+  // HP gercep (0.35), desktop sinematik (0.14).
+  const rate = mobile ? 0.35 : 0.14;
 
   const { scrollYProgress } = useScroll({
     target: targetRef ?? wrapRef,
@@ -36,8 +49,8 @@ export function ScrollVideo({
   });
 
   useEffect(() => {
-    if (near.inView && !srcUrl) setSrcUrl(src);
-  }, [near.inView, srcUrl, src]);
+    if (near.inView && !srcUrl) setSrcUrl(file);
+  }, [near.inView, srcUrl, file]);
 
   useEffect(() => scrollYProgress.on("change", (v) => {
     target.current = v;
@@ -50,10 +63,11 @@ export function ScrollVideo({
     const tick = () => {
       const v = videoRef.current;
       if (v && v.duration && Number.isFinite(v.duration) && !reduce && nearRef.current) {
-        current.current += (target.current - current.current) * 0.14;
+        current.current += (target.current - current.current) * rate;
         // Snap ke grid frame (24fps) — seek selalu mendarat tepat, no ghosting.
         const t = Math.round(Math.min(Math.max(current.current, 0), 1) * v.duration * FPS) / FPS;
-        if (Math.abs(t - lastSet) > 1 / FPS / 2) {
+        // HP: jangan seek kalau decoder belum siap → no stall.
+        if (Math.abs(t - lastSet) > 1 / FPS / 2 && v.readyState >= 2) {
           try {
             v.currentTime = t;
             lastSet = t;
@@ -66,7 +80,7 @@ export function ScrollVideo({
     };
     id = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(id);
-  }, [reduce]);
+  }, [reduce, rate]);
 
   if (failed) return null;
 
@@ -77,6 +91,7 @@ export function ScrollVideo({
         <video
           ref={videoRef}
           src={srcUrl}
+          poster={poster}
           muted
           playsInline
           preload="auto"
