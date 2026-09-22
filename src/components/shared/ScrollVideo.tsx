@@ -17,6 +17,7 @@ export function ScrollVideo({
   poster,
   label,
   targetRef,
+  cinema,
 }: {
   src: string;
   /** Versi ringan untuk HP (dipilih otomatis di bawah 768px). */
@@ -26,6 +27,9 @@ export function ScrollVideo({
   label: string;
   /** Elemen yang progres scroll-nya dipetakan ke durasi video. Default: boks video sendiri (mode transit). Untuk mode pinned, kirim ref kontainer tinggi dari parent. */
   targetRef?: React.RefObject<HTMLElement | null>;
+  /** Mode cinema: di layar portrait, video tampil utuh (contain, tajam 1:1)
+   *  di atas background blur dari poster — bukan di-crop-zoom 3.5x. */
+  cinema?: boolean;
 }) {
   const reduce = useReducedMotion();
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -87,6 +91,14 @@ export function ScrollVideo({
   return (
     <div ref={near.ref} className="absolute inset-0 overflow-hidden" aria-hidden="true">
       <div ref={wrapRef} className="absolute inset-0" />
+      {cinema && poster && (
+        <img
+          src={poster}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 hidden h-full w-full scale-110 object-cover blur-2xl brightness-[0.55] portrait:block"
+        />
+      )}
       {srcUrl && (
         <video
           ref={videoRef}
@@ -98,8 +110,11 @@ export function ScrollVideo({
           disablePictureInPicture
           aria-label={label}
           onError={() => setFailed(true)}
-          className="h-full w-full object-cover"
-          style={{ filter: "brightness(1.06) saturate(1.08)" }}
+          className={
+            cinema
+              ? "absolute inset-0 h-full w-full object-cover landscape:[filter:brightness(1.06)_saturate(1.08)] portrait:object-contain"
+              : "h-full w-full object-cover [filter:brightness(1.06)_saturate(1.08)]"
+          }
         />
       )}
     </div>

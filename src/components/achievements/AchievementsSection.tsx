@@ -52,6 +52,7 @@ export function AchievementsSection() {
               poster="/assets/highlight-poster.webp"
               label="Video highlight"
               targetRef={tallRef}
+              cinema
             />
             <div
               className="pointer-events-none absolute inset-0"
